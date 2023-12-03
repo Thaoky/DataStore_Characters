@@ -1,0 +1,36 @@
+<Ui xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns="http://www.blizzard.com/wow/ui/">
+	<Script file="Options.lua"></Script>
+
+	<Frame parentKey="CharactersOptions" parent="DataStoreFrames" hidden="true">
+		<Size x="615" y="306" />
+		<KeyValues>
+			<KeyValue key="module" value="DataStore_Characters" />
+		</KeyValues>
+		<Frames>
+			<CheckButton parentKey="RequestPlayTime" inherits="DataStoreToggleableOptionTemplate">
+				<Anchors> 
+					<Anchor point="TOPLEFT" x="40" y="-40" />
+				</Anchors>
+				<KeyValues>
+					<KeyValue key="option" value="RequestPlayTime" />
+					<KeyValue key="locLabel" value="REQUEST_PLAYTIME_TEXT" />
+					<KeyValue key="locTitle" value="REQUEST_PLAYTIME_TITLE" />
+					<KeyValue key="locEnabled" value="REQUEST_PLAYTIME_ENABLED" />
+					<KeyValue key="locDisabled" value="REQUEST_PLAYTIME_DISABLED" />
+				</KeyValues>
+			</CheckButton>
+			<CheckButton parentKey="HideRealPlayTime" inherits="DataStoreToggleableOptionTemplate">
+				<Anchors> 
+					<Anchor point="TOP" relativeKey="$parent.RequestPlayTime" relativePoint="BOTTOM" x="0" y="-10" />
+				</Anchors>
+				<KeyValues>
+					<KeyValue key="option" value="HideRealPlayTime" />
+					<KeyValue key="locLabel" value="HIDE_PLAYTIME_TEXT" />
+					<KeyValue key="locTitle" value="HIDE_PLAYTIME_TITLE" />
+					<KeyValue key="locEnabled" value="HIDE_PLAYTIME_ENABLED" />
+					<KeyValue key="locDisabled" value="HIDE_PLAYTIME_DISABLED" />
+				</KeyValues>
+			</CheckButton>
+		</Frames>
+	</Frame>
+</Ui>

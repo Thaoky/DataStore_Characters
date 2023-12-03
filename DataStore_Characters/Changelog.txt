@@ -1,0 +1,57 @@
+DataStore Changelog (dates in dd/mm/yyyy)
+===================
+
+
+Version 2023.11.17 (17/11/2023)
+
+- ToC Update for Vanilla
+
+Version 2023.11.06 (06/11/2023)
+
+- ToC Update for 10.2
+
+Version 2023.05.03 (03/05/2023)
+
+- ToC Update for 10.1
+
+Version 2023.02.23 (23/02/2023)
+
+- ToC Update for 10.0.05
+
+Version 2022.11.27 (27/11/2022)
+
+- Updated the Spanish (esES) translations thanks to a contribution from Romanv !
+
+Version 2022.11.16 (16/11/2022)
+
+- ToC Update for 10.0.02
+
+Version 2022.10.30 (30/10/2022)
+
+- ToC Update for 10.0
+
+Version 2022.10.25 (25/10/2022)
+
+- ToC Update for all versions
+
+Version 2022.06.05 (05/06/2022)
+
+- ToC Update for all versions
+
+Version 2022.04.24 (24/04/2022)
+
+- Added the class color for the Evoker.
+
+Version 2022.03.14 (14/03/2022)
+
+- ToC Update for all versions
+
+Version 2021.11.03 (03/11/2021)
+
+- Fixed a Lua error when trying to get a covenant name.
+
+Version 2021.10.03 (03/10/2021)
+
+- As of this version, DataStore modules will be released in a single package compatible with all versions of the game.
+- As of this version, the version number will no longer be 1.x or 9.x, but rather a date that clearly identifies when the release took place.
+

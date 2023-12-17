@@ -12,6 +12,9 @@ local addon = _G[addonName]
 
 local isCoreDataMissing
 local MAX_LOGOUT_TIMESTAMP = 5000000000	-- 5 billion, current values are at ~1.4 billion, in seconds, that leaves us 110+ years, I think we're covered..
+local MAX_ALT_LEVEL = WOW_PROJECT_ID == WOW_PROJECT_WRATH_CLASSIC
+	and MAX_PLAYER_LEVEL_TABLE[GetExpansionLevel()]
+	or MAX_PLAYER_LEVEL
 
 -- Replace RAID_CLASS_COLORS which is not always loaded when we need it.
 local classColors = {
@@ -391,7 +394,7 @@ local function _GetRestXPRate(character)
 	end
 	
 	-- ensure to report that a max level has not earned xp while resting
-	if character.level == MAX_PLAYER_LEVEL then
+	if character.level == MAX_ALT_LEVEL then
 		xpEarnedResting = -1
 	end
 	

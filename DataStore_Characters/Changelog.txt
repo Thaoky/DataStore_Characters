@@ -2,6 +2,10 @@ DataStore Changelog (dates in dd/mm/yyyy)
 ===================
 
 
+Version 2023.12.17 (17/12/2023)
+
+- Fixed the check for rested XP in WotLK.
+
 Version 2023.11.17 (17/11/2023)
 
 - ToC Update for Vanilla

@@ -1,5 +1,5 @@
-local L = LibStub("AceLocale-3.0"):NewLocale( "DataStore_Characters", "ruRU" )
-
+local addonName = ...
+local L = DataStore:SetLocale(addonName, "ruRU")
 if not L then return end
 
 L["HIDE_PLAYTIME_DISABLED"] = "Будет отображаться реальное время игры."
@@ -10,4 +10,3 @@ L["REQUEST_PLAYTIME_DISABLED"] = "Не передавать время игры 
 L["REQUEST_PLAYTIME_ENABLED"] = "Время обновляется при каждом входе"
 L["REQUEST_PLAYTIME_TEXT"] = "Обновлять время игры при каждом входе"
 L["REQUEST_PLAYTIME_TITLE"] = "Обновлять время игры при каждом входе"
-

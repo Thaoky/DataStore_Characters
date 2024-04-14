@@ -1,5 +1,5 @@
-local L = LibStub("AceLocale-3.0"):NewLocale("DataStore_Characters", "esES")
-
+local addonName = ...
+local L = DataStore:SetLocale(addonName, "esES")
 if not L then return end
 
 L["HIDE_PLAYTIME_DISABLED"] = "Se mostrará su tiempo de juego real."

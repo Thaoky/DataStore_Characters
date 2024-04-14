@@ -1,5 +1,5 @@
-local L = LibStub("AceLocale-3.0"):NewLocale( "DataStore_Characters", "koKR" )
-
+local addonName = ...
+local L = DataStore:SetLocale(addonName, "koKR")
 if not L then return end
 
 L["HIDE_PLAYTIME_DISABLED"] = "실제 플레이 시간이 표시됩니다."

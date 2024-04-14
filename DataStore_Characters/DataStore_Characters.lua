@@ -4,11 +4,21 @@ July 18th, 2009
 --]]
 if not DataStore then return end
 
-local addonName = "DataStore_Characters"
+local addonName, addon = ...
+local thisCharacter
+local guildRanks
+local options
 
-_G[addonName] = LibStub("AceAddon-3.0"):NewAddon(addonName, "AceConsole-3.0", "AceEvent-3.0")
+local DataStore = DataStore
+local UnitName, UnitLevel, UnitClass, UnitRace, UnitSex, UnitXP, UnitXPMax = UnitName, UnitLevel, UnitClass, UnitRace, UnitSex, UnitXP, UnitXPMax
+local GetRealZoneText, GetSubZoneText, GetGuildInfo, GetXPExhaustion, GetMoney, GetBindLocation = GetRealZoneText, GetSubZoneText, GetGuildInfo, GetXPExhaustion, GetMoney, GetBindLocation
+local IsResting, IsXPUserDisabled, format, time = IsResting, IsXPUserDisabled, format, time
+local C_CovenantSanctumUI, C_Covenants, C_Soulbinds, C_CreatureInfo, C_ClassColor = C_CovenantSanctumUI, C_Covenants, C_Soulbinds, C_CreatureInfo, C_ClassColor
+local isRetail = (WOW_PROJECT_ID == WOW_PROJECT_MAINLINE)
 
-local addon = _G[addonName]
+local bit64 = LibStub("LibBit64")
+local bAnd = bit.band
+local bOr = bit.bor
 
 local isCoreDataMissing
 local MAX_LOGOUT_TIMESTAMP = 5000000000	-- 5 billion, current values are at ~1.4 billion, in seconds, that leaves us 110+ years, I think we're covered..
@@ -16,93 +26,19 @@ local MAX_ALT_LEVEL = WOW_PROJECT_ID == WOW_PROJECT_WRATH_CLASSIC
 	and MAX_PLAYER_LEVEL_TABLE[GetExpansionLevel()]
 	or MAX_PLAYER_LEVEL
 
--- Replace RAID_CLASS_COLORS which is not always loaded when we need it.
-local classColors = {
-	["HUNTER"] = "|cffaad372",
-	["WARRIOR"] = "|cffc69b6d",
-	["PALADIN"] = "|cfff48cba",
-	["MAGE"] = "|cff3fc6ea",
-	["PRIEST"] = "|cFFFFFFFF",
-	["SHAMAN"] = "|cff0070dd",
-	["WARLOCK"] = "|cff8787ed",
-	["DEMONHUNTER"] = "|cffa330c9",
-	["DEATHKNIGHT"] = "|cffc41e3a",
-	["DRUID"] = "|cffff7c0a",
-	["MONK"] = "|cff00ff96",
-	["ROGUE"] = "|cfffff468",
-	["EVOKER"] = "|cff33937f",
-	
-	
-}
-
-local AddonDB_Defaults = {
-	global = {
-		Options = {
-			RequestPlayTime = true,		-- Request play time at logon
-			HideRealPlayTime = false,	-- Hide real play time to client addons (= return 0 instead of real value)
-		},
-		Characters = {
-			['*'] = {				-- ["Account.Realm.Name"] 
-				-- ** General Stuff **
-				lastUpdate = nil,		-- last time this char was updated. Set at logon & logout
-				name = nil,				-- to simplify processing a bit, the name is saved in the table too, in addition to being part of the key
-				level = nil,
-				race = nil,
-				englishRace = nil,
-				class = nil,
-				englishClass = nil,	-- "WARRIOR", "DRUID" .. english & caps, regardless of locale
-				classID = nil,
-				faction = nil,
-				localizedFaction = nil,
-				gender = nil,			-- UnitSex
-				lastLogoutTimestamp = nil,
-				money = nil,
-				played = 0,				-- /played, in seconds
-				playedThisLevel = 0,	-- /played at this level, in seconds
-				zone = nil,				-- character location
-				subZone = nil,
-				bindLocation = nil,	-- location where the hearthstone is bound to
-				
-				-- ** XP **
-				XP = nil,				-- current level xp
-				XPMax = nil,			-- max xp at current level 
-				RestXP = nil,
-				isResting = nil,		-- nil = out of an inn
-				isXPDisabled = nil,
-				
-				-- ** Guild  **
-				guildName = nil,		-- nil = not in a guild, as returned by GetGuildInfo("player")
-				guildRankName = nil,
-				guildRankIndex = nil,
-				
-				-- ** Expansion Features / 9.0 - Shadowlands **
-				renownLevel = 1,					-- Covenant Renown Level
-				activeCovenantID = 0,			-- Active Covenant ID (0 = None)
-				activeSoulbindID = 0,			-- Active Soulbind ID (0 = None)
-			}
-		}
-	}
-}
-
--- *** Utility functions ***
-local function GetOption(option)
-	return addon.db.global.Options[option]
-end
 
 -- *** Scanning functions ***
 local function ScanPlayerLocation()
-	local character = addon.ThisCharacter
+	local char = thisCharacter
 	
-	character.zone = GetRealZoneText()
-	character.subZone = GetSubZoneText()
+	char.zone = GetRealZoneText()
+	char.subZone = GetSubZoneText()
 end
 
 local function ScanCovenant()
-	local character = addon.ThisCharacter
-	
-	character.activeCovenantID = C_Covenants.GetActiveCovenantID()
-	character.activeSoulbindID = C_Soulbinds.GetActiveSoulbindID()
-	character.renownLevel = C_CovenantSanctumUI.GetRenownLevel()
+	thisCharacter.CovenantInfo = C_CovenantSanctumUI.GetRenownLevel()		-- bits 0-6 = renown level
+		+ bit64:LeftShift(C_Covenants.GetActiveCovenantID(), 7)				-- bits 7-10 = covenantID
+		+ bit64:LeftShift(C_Soulbinds.GetActiveSoulbindID(), 11)				-- bits 11+ = soulbindID
 end
 
 
@@ -111,98 +47,99 @@ local function OnPlayerGuildUpdate()
 
 	-- at login this event is called between OnEnable and PLAYER_ALIVE, where GetGuildInfo returns a wrong value
 	-- however, the value returned here is correct
-	local character = addon.ThisCharacter
-	local hasGuild = (character.guildName ~= nil)
+	local char = thisCharacter
+	local guildID = DataStore:GetCharacterGuildID(DataStore.ThisCharKey)
 	
-	if IsInGuild() then
-		-- find a way to improve this, it's minor, but it's called too often at login
-		local name, rank, index = GetGuildInfo("player")
-		if name and rank and index then
-			character.guildName = name
-			character.guildRankName = rank
-			character.guildRankIndex = index
-		end
-	else
-		-- If the event is triggered after a gkick/gquit, be sure to clean the guild info
-		character.guildName = nil
-		character.guildRankName = nil
-		character.guildRankIndex = nil
+	if IsInGuild() and guildID then
 		
-		-- if the character had a guild when entering this function, but is no longer in a guild, then trigger the event
-		if hasGuild then
-			addon:SendMessage("DATASTORE_GUILD_LEFT")
-		end
-	end	
+		-- point to the guild
+		guildRanks[guildID] = guildRanks[guildID] or {}
+		local guildData = guildRanks[guildID]
+		
+		-- find a way to improve this, it's minor, but it's called too often at login
+		local _, rank, index = GetGuildInfo("player")
+		guildData[index] = rank
+		
+		char.guildRankIndex = index
+	end
+	
+	-- If the event is triggered after a gkick/gquit, be sure to clean the guild info
+	-- char.guildRankIndex = nil
+	
+	-- if the character had a guild when entering this function, but is no longer in a guild, then trigger the event
+	if guildID then
+		DataStore:Broadcast("DATASTORE_GUILD_LEFT")
+	end
 end
 
 local function ScanXPDisabled()
-	addon.ThisCharacter.isXPDisabled = IsXPUserDisabled() or nil
+	thisCharacter.BaseInfo = IsXPUserDisabled()
+		and bit64:SetBit(thisCharacter.BaseInfo, 20)
+		or bit64:ClearBit(thisCharacter.BaseInfo, 20)
 end
 
 local function OnPlayerUpdateResting()
-	addon.ThisCharacter.isResting = IsResting()
+	thisCharacter.BaseInfo = IsResting()
+		and bit64:SetBit(thisCharacter.BaseInfo, 21)
+		or bit64:ClearBit(thisCharacter.BaseInfo, 21)
 end
 
 local function OnPlayerXPUpdate()
-	local character = addon.ThisCharacter
-	
-	character.XP = UnitXP("player")
-	character.XPMax = UnitXPMax("player")
-	character.RestXP = GetXPExhaustion() or 0
+	thisCharacter.XPInfo = UnitXP("player")				-- bits 0-19 = player XP
+		+ bit64:LeftShift(UnitXPMax("player"), 20)		-- bits 20-39 = XP Max
+		+ bit64:LeftShift(GetXPExhaustion() or 0, 40)	-- bits 40+ = rest XP
 end
 
 local function OnPlayerMoney()
-	addon.ThisCharacter.money = GetMoney()
+	thisCharacter.money = GetMoney()
 end
 
 local function OnPlayerAlive()
-	local character = addon.ThisCharacter
+	local char = thisCharacter
 
-	character.name = UnitName("player")		-- to simplify processing a bit, the name is saved in the table too, in addition to being part of the key
-	character.level = UnitLevel("player")
-	character.race, character.englishRace = UnitRace("player")
-	character.class, character.englishClass, character.classID = UnitClass("player")
-	character.gender = UnitSex("player")
-	character.faction, character.localizedFaction = UnitFactionGroup("player")
-	character.lastLogoutTimestamp = MAX_LOGOUT_TIMESTAMP
-	character.bindLocation = GetBindLocation()
-	character.lastUpdate = time()
+	char.name = UnitName("player")		-- to simplify processing a bit, the name is saved in the table too, in addition to being part of the key
+	char.bindLocation = GetBindLocation()
+	char.lastLogoutTimestamp = MAX_LOGOUT_TIMESTAMP
+	
+	thisCharacter.BaseInfo = UnitLevel("player")						-- bits 0-6 = level
+		+ bit64:LeftShift(select(3, UnitClass("player")), 7)		-- bits 7-10 = classID
+		+ bit64:LeftShift(select(3, UnitRace("player")), 11)		-- bits 11-17 = raceID
+		+ bit64:LeftShift(UnitSex("player"), 18)						-- bits 18-19 = gender
 	
 	OnPlayerMoney()
 	OnPlayerXPUpdate()
 	OnPlayerUpdateResting()
 	OnPlayerGuildUpdate()
 	
-	if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
+	if isRetail then
 		ScanXPDisabled()
 		ScanCovenant()
 	end
+	
+	char.lastUpdate = time()
 end
 
 local function OnPlayerLogout()
-	addon.ThisCharacter.lastLogoutTimestamp = time()
-	addon.ThisCharacter.lastUpdate = time()
+	local char = thisCharacter
+	
+	char.lastLogoutTimestamp = time()
+	char.lastUpdate = time()
 end
 
 local function OnPlayerLevelUp(event, newLevel)
-	addon.ThisCharacter.level = newLevel
+	
+	-- update the first 7 bits only
+	local cleared = bAnd(thisCharacter.BaseInfo, 0xFFFFFF80)
+	thisCharacter.BaseInfo =  bOr(cleared, bAnd(newLevel, 0x7F))
 end
 
 local function OnHearthstoneBound(event)
-	addon.ThisCharacter.bindLocation = GetBindLocation()
+	thisCharacter.bindLocation = GetBindLocation()
 end
 
 local function OnTimePlayedMsg(event, totalTime, currentLevelTime)
-	addon.ThisCharacter.played = totalTime
-	addon.ThisCharacter.playedThisLevel = currentLevelTime
-end
-
-local function OnCovenantChosen()
-	ScanCovenant()
-end
-
-local function OnSanctumRenownLevelChanged()
-	ScanCovenant()
+	thisCharacter.played = totalTime
+	thisCharacter.playedThisLevel = currentLevelTime
 end
 
 
@@ -212,71 +149,63 @@ local function _GetCharacterName(character)
 end
 
 local function _GetCharacterLevel(character)
-	return character.level or 0
+	return bit64:GetBits(character.BaseInfo, 0, 7)	-- bits 0-6 = level
 end
 
 local function _GetCharacterRace(character)
-	return character.race or "", character.englishRace or ""
+	local raceID = bit64:GetBits(character.BaseInfo, 11, 7)	-- bits 11-17 = raceID
+	local info = C_CreatureInfo.GetRaceInfo(raceID)
+	
+	-- localized name, e.g. "Night Elf" + non-localized name, e.g. "NightElf"
+	return info.raceName or "", info.clientFileString or "", raceID
 end
 
 local function _GetCharacterClass(character)
-	return character.class or "", character.englishClass or "", character.classID
-end
+	local classID = bit64:GetBits(character.BaseInfo, 7, 4)	-- bits 7-10 = classID
+	local info = C_CreatureInfo.GetClassInfo(classID)
 
-local function _GetColoredCharacterName(character)
-	-- check if name and englishClass are present, if they are not, core info is missing for at least one alt.
-	-- but we can't say which.. and there might be many, so only show the message once.
-	if (not character.name or not character.englishClass) and not isCoreDataMissing then
-		addon:Print("Core information about one or more characters is missing. Be sure to logout and login again with that character.\nThe add-on should be enabled while no character is logged in, otherwise character information cannot properly be read!")
-		isCoreDataMissing = true
-	end
-
-	return format("%s%s", classColors[character.englishClass], character.name)
-end
-	
-local function _GetCharacterClassColor(character)
-	-- return just the color of this character's class (based on the character key)
-	return format("%s", classColors[character.englishClass])
+	-- Localized name, e.g. "Warrior" or "Guerrier" + "WARRIOR" + 1
+	return info.className or "", info.classFile or "", classID
 end
 
 local function _GetClassColor(class)
-	-- return just the color of for any english class 	
-	return format("%s", classColors[class]) or "|cFFFFFFFF"
+	return C_ClassColor.GetClassColor(class):GenerateHexColorMarkup()
+end
+
+local function _GetCharacterClassColor(character)
+	local _, englishClass = _GetCharacterClass(character)
+
+	-- return just the color of this character's class (based on the character key)
+	return _GetClassColor(englishClass)
+end
+
+local function _GetColoredCharacterName(character)
+	return format("%s%s", _GetCharacterClassColor(character), character.name)
 end
 
 local function _GetCharacterFaction(character)
-	return character.faction or "", character.localizedFaction or ""
+	local raceID = bit64:GetBits(character.BaseInfo, 11, 7)	-- bits 11-17 = raceID
+	local info = C_CreatureInfo.GetFactionInfo(raceID)
+
+	-- faction, localized faction name
+	return info.groupTag or "", info.name or ""
 end
-	
+
+local factionColors = {
+	["Alliance"] = "|cFF2459FF",
+	["Horde"] = "|cFFFF0000",
+	["Neutral"] = "|cFF909090",
+}
+
 local function _GetColoredCharacterFaction(character)
-	-- Localized version may not yet be there, only added with a bugfix in 9.0.010 
-	-- removed the ELSE part later on, in the meantime, avoid generating loads of issues for players
+	local faction = _GetCharacterFaction(character)
 	
-	if character.localizedFaction then
-		if character.localizedFaction == FACTION_ALLIANCE then
-			return format("|cFF2459FF%s", FACTION_ALLIANCE)
-			
-		elseif character.localizedFaction == FACTION_HORDE then
-			return format("|cFFFF0000%s", FACTION_HORDE)
-			
-		else	-- for young pandas, who have a "Neutral" faction
-			return format("|cFF909090%s", character.localizedFaction)
-		end
-	else
-		if character.faction == "Alliance" then
-			return format("|cFF2459FF%s", "Alliance")
-			
-		elseif character.faction == "Horde" then
-			return format("|cFFFF0000%s", "Horde")
-			
-		else	-- for young pandas, who have a "Neutral" faction
-			return format("|cFF909090%s", character.faction)
-		end
-	end
+	-- for young pandas, who have a "Neutral" faction, use this color if by any chance the group tag is unknown.
+	return factionColors[faction] and factionColors[faction] or factionColors["Neutral"]
 end
 
 local function _GetCharacterGender(character)
-	return character.gender or ""
+	return bit64:GetBits(character.BaseInfo, 18, 2) or ""	-- bits 18-19 = gender
 end
 
 local function _GetLastLogout(character)
@@ -291,20 +220,25 @@ local function _GetBindLocation(character)
 	return character.bindLocation or ""
 end
 
-local function _GetXP(character)
-	return character.XP or 0
+local function _IsResting(character)
+	-- isResting = bit 21
+	return bit64:TestBit(character.BaseInfo, 21)
 end
 
-local function _GetXPRate(character)
-	return floor((character.XP / character.XPMax) * 100)
+local function _GetXP(character)
+	return bit64:GetBits(character.XPInfo, 0, 20)	-- bits 0-19 = player XP
 end
 
 local function _GetXPMax(character)
-	return character.XPMax or 0
+	return bit64:GetBits(character.XPInfo, 20, 20)	-- bits 20-39 = XP Max
 end
 
 local function _GetRestXP(character)
-	return character.RestXP or 0
+	return bit64:RightShift(character.XPInfo, 40)	-- bits 40+ = rest XP
+end
+
+local function _GetXPRate(character)
+	return floor((_GetXP(character) / _GetXPMax(character)) * 100)
 end
 
 local function _GetRestXPRate(character)
@@ -337,16 +271,19 @@ local function _GetRestXPRate(character)
 	local rate = 0
 	local multiplier = 1.5
 	
-	if character.englishRace == "Pandaren" then
+	if _GetCharacterRace(character) == "Pandaren" then
 		multiplier = 3
 	end
 	
 	local savedXP = 0
 	local savedRate = 0
-	local maxXP = character.XPMax * multiplier
-	if character.RestXP then
-		rate = character.RestXP / (maxXP / 100)
-		savedXP = character.RestXP
+	local xpMax = _GetXPMax(character)
+	local restXP = _GetRestXP(character)
+	
+	local maxXP = xpMax * multiplier
+	if restXP then
+		rate = restXP / (maxXP / 100)
+		savedXP = restXP
 		savedRate = rate
 	end
 	
@@ -362,13 +299,13 @@ local function _GetRestXPRate(character)
 	
 	-- time since last logout, MAX_LOGOUT_TIMESTAMP for current char, <> for all others
 	if character.lastLogoutTimestamp ~= MAX_LOGOUT_TIMESTAMP then	
-		local oneXPBubble = character.XPMax / 20		-- 5% at current level 
+		local oneXPBubble = xpMax / 20		-- 5% at current level 
 		local elapsed = (now - character.lastLogoutTimestamp)		-- time since last logout, in seconds
 		local numXPBubbles = elapsed / 28800		-- 28800 seconds = 8 hours => get the number of xp bubbles earned
 		
 		xpEarnedResting = numXPBubbles * oneXPBubble
 		
-		if not character.isResting then
+		if not _IsResting(character) then
 			xpEarnedResting = xpEarnedResting / 4
 		end
 
@@ -394,27 +331,29 @@ local function _GetRestXPRate(character)
 	end
 	
 	-- ensure to report that a max level has not earned xp while resting
-	if character.level == MAX_ALT_LEVEL then
+	if _GetCharacterLevel(character) == MAX_ALT_LEVEL then
 		xpEarnedResting = -1
 	end
 	
 	return rate, savedXP, savedRate, rateEarnedResting, xpEarnedResting, maxXP, isFullyRested, timeUntilFullyRested
 end
 
-local function _IsResting(character)
-	return character.isResting
-end
-
 local function _IsXPDisabled(character)
-	return character.isXPDisabled
+	-- isXPDisabled = bit 20
+	return bit64:TestBit(character.BaseInfo, 20)
 end
 	
-local function _GetGuildInfo(character)
-	return character.guildName or "", character.guildRankName, character.guildRankIndex
+local function _GetGuildInfo(character, guildID)
+	local ranks = guildRanks[guildID]
+	
+	if ranks then
+		local index = character.guildRankIndex
+		return ranks[index], index
+	end
 end
 
 local function _GetPlayTime(character)
-	return (GetOption("HideRealPlayTime")) and 0 or character.played, character.playedThisLevel
+	return options.HideRealPlayTime and 0 or character.played, character.playedThisLevel
 end
 
 local function _GetRealPlayTime(character)
@@ -426,130 +365,101 @@ local function _GetLocation(character)
 	return character.zone, character.subZone
 end
 
+local function _GetCovenantInfo(character)
+	local renownLevel = bit64:GetBits(character.CovenantInfo, 0, 7)	-- bits 0-6 = renown level
+	local covenantID = bit64:GetBits(character.CovenantInfo, 7, 4)		-- bits 7-10 = covenantID
+	local soulbindID = bit64:RightShift(character.CovenantInfo, 11)	-- bits 11+ = soulbindID
 
-local mixins = {
-	GetCharacterName = _GetCharacterName,
-	GetCharacterLevel = _GetCharacterLevel,
-	GetCharacterRace = _GetCharacterRace,
-	GetCharacterClass = _GetCharacterClass,
-	GetColoredCharacterName = _GetColoredCharacterName,
-	GetCharacterClassColor = _GetCharacterClassColor,
-	GetClassColor = _GetClassColor,
-	GetCharacterFaction = _GetCharacterFaction,
-	GetColoredCharacterFaction = _GetColoredCharacterFaction,
-	GetCharacterGender = _GetCharacterGender,
-	GetLastLogout = _GetLastLogout,
-	GetMoney = _GetMoney,
-	GetBindLocation = _GetBindLocation,
-	GetXP = _GetXP,
-	GetXPRate = _GetXPRate,
-	GetXPMax = _GetXPMax,
-	GetRestXP = _GetRestXP,
-	GetRestXPRate = _GetRestXPRate,
-	IsResting = _IsResting,
-	IsXPDisabled = _IsXPDisabled,
-	GetGuildInfo = _GetGuildInfo,
-	GetPlayTime = _GetPlayTime,
-	GetRealPlayTime = _GetRealPlayTime,
-	GetLocation = _GetLocation,
-}
-
-if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
-	mixins["GetCovenantInfo"] = function(character)
-		return character.activeCovenantID, character.activeSoulbindID, character.renownLevel
-	end
-
-	mixins["GetCovenantNameByID"] = function(id)
-		local data = C_Covenants.GetCovenantData(id)
-		return (data) and data.name or ""
-	end
-
-	mixins["GetCovenantName"] = function(character)
-		local id = character.activeCovenantID
-		local data = C_Covenants.GetCovenantData(id)
-		return (data) and data.name or ""	
-	end
+	return covenantID, soulbindID, renownLevel
 end
 
-function addon:OnInitialize()
-	addon.db = LibStub("AceDB-3.0"):New(format("%sDB", addonName), AddonDB_Defaults)
-
-	DataStore:RegisterModule(addonName, addon, mixins)
-	DataStore:SetCharacterBasedMethod("GetCharacterName")
-	DataStore:SetCharacterBasedMethod("GetCharacterLevel")
-	DataStore:SetCharacterBasedMethod("GetCharacterRace")
-	DataStore:SetCharacterBasedMethod("GetCharacterClass")
-	DataStore:SetCharacterBasedMethod("GetColoredCharacterName")
-	DataStore:SetCharacterBasedMethod("GetCharacterClassColor")
-	DataStore:SetCharacterBasedMethod("GetCharacterFaction")
-	DataStore:SetCharacterBasedMethod("GetColoredCharacterFaction")
-	DataStore:SetCharacterBasedMethod("GetCharacterGender")
-	DataStore:SetCharacterBasedMethod("GetLastLogout")
-	DataStore:SetCharacterBasedMethod("GetMoney")
-	DataStore:SetCharacterBasedMethod("GetBindLocation")
-	DataStore:SetCharacterBasedMethod("GetXP")
-	DataStore:SetCharacterBasedMethod("GetXPRate")
-	DataStore:SetCharacterBasedMethod("GetXPMax")
-	DataStore:SetCharacterBasedMethod("GetRestXP")
-	DataStore:SetCharacterBasedMethod("GetRestXPRate")
-	DataStore:SetCharacterBasedMethod("IsResting")
-	DataStore:SetCharacterBasedMethod("IsXPDisabled")
-	DataStore:SetCharacterBasedMethod("GetGuildInfo")
-	DataStore:SetCharacterBasedMethod("GetPlayTime")
-	DataStore:SetCharacterBasedMethod("GetRealPlayTime")
-	DataStore:SetCharacterBasedMethod("GetLocation")
+local function _GetCovenantName(character)
+	local id = bit64:GetBits(character.CovenantInfo, 7, 4)		-- bits 7-10 = covenantID
+	local data = C_Covenants.GetCovenantData(id)
 	
-	if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
-		DataStore:SetCharacterBasedMethod("GetCovenantInfo")
-		DataStore:SetCharacterBasedMethod("GetCovenantName")
-	end
+	return data and data.name or ""
 end
 
-function addon:OnEnable()
-	addon:RegisterEvent("PLAYER_ALIVE", OnPlayerAlive)
-	addon:RegisterEvent("PLAYER_LOGOUT", OnPlayerLogout)
-	addon:RegisterEvent("PLAYER_LEVEL_UP", OnPlayerLevelUp)
-	addon:RegisterEvent("PLAYER_MONEY", OnPlayerMoney)
-	addon:RegisterEvent("PLAYER_XP_UPDATE", OnPlayerXPUpdate)
-	addon:RegisterEvent("PLAYER_UPDATE_RESTING", OnPlayerUpdateResting)
-	addon:RegisterEvent("HEARTHSTONE_BOUND", OnHearthstoneBound)
-	addon:RegisterEvent("PLAYER_GUILD_UPDATE", OnPlayerGuildUpdate)				-- for gkick, gquit, etc..
-	addon:RegisterEvent("ZONE_CHANGED", ScanPlayerLocation)
-	addon:RegisterEvent("ZONE_CHANGED_NEW_AREA", ScanPlayerLocation)
-	addon:RegisterEvent("ZONE_CHANGED_INDOORS", ScanPlayerLocation)
-	addon:RegisterEvent("TIME_PLAYED_MSG", OnTimePlayedMsg)					-- register the event if RequestTimePlayed is not called afterwards. If another addon calls it, we want to get the data anyway.
+DataStore:OnAddonLoaded(addonName, function()
+	DataStore:RegisterModule({
+		addon = addon,
+		addonName = addonName,
+		rawTables = {
+			"DataStore_Characters_GuildRanks",
+			"DataStore_Characters_Options"
+		},
+		characterTables = {
+			["DataStore_Characters_Info"] = {
+				GetCharacterName = _GetCharacterName,
+				GetCharacterLevel = _GetCharacterLevel,
+				GetCharacterRace = _GetCharacterRace,
+				GetCharacterClass = _GetCharacterClass,
+				GetCharacterClassColor = _GetCharacterClassColor,
+				GetColoredCharacterName = _GetColoredCharacterName,
+				GetCharacterFaction = _GetCharacterFaction,
+				GetColoredCharacterFaction = _GetColoredCharacterFaction,
+				GetCharacterGender = _GetCharacterGender,
+				GetLastLogout = _GetLastLogout,
+				GetMoney = _GetMoney,
+				GetBindLocation = _GetBindLocation,
+				GetXP = _GetXP,
+				GetXPRate = _GetXPRate,
+				GetXPMax = _GetXPMax,
+				GetRestXP = _GetRestXP,
+				GetRestXPRate = _GetRestXPRate,
+				IsResting = _IsResting,
+				IsXPDisabled = _IsXPDisabled,
+				GetGuildInfo = _GetGuildInfo,
+				GetLocation = _GetLocation,
+				GetPlayTime = _GetPlayTime,
+				GetRealPlayTime = _GetRealPlayTime,
+				GetCovenantInfo = isRetail and _GetCovenantInfo,
+				GetCovenantName = isRetail and _GetCovenantName,
+			},
+		}
+	})
+
+	DataStore:RegisterMethod(addon, "GetClassColor", _GetClassColor)
 	
-	if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
-		addon:RegisterEvent("ENABLE_XP_GAIN", ScanXPDisabled)
-		addon:RegisterEvent("DISABLE_XP_GAIN", ScanXPDisabled)
-		addon:RegisterEvent("COVENANT_CHOSEN", OnCovenantChosen)
-		addon:RegisterEvent("COVENANT_SANCTUM_RENOWN_LEVEL_CHANGED", OnSanctumRenownLevelChanged)
+	if isRetail then
+		DataStore:RegisterMethod(addon, "GetCovenantNameByID", function(id)
+			local data = C_Covenants.GetCovenantData(id)
+			return data and data.name or ""
+		end)
 	end
 	
-	addon:SetupOptions()
+	thisCharacter = DataStore:GetCharacterDB("DataStore_Characters_Info", true)
+	guildRanks = DataStore_Characters_GuildRanks
+end)
+
+DataStore:OnPlayerLogin(function()
+	options = DataStore_Characters_Options
+	options.RequestPlayTime = options.RequestPlayTime or true		-- Request play time at logon
+	options.HideRealPlayTime = options.HideRealPlayTime or false	-- Hide real play time to client addons (= return 0 instead of real value)
 	
-	if GetOption("RequestPlayTime") then
+	addon:ListenTo("PLAYER_ALIVE", OnPlayerAlive)
+	addon:ListenTo("PLAYER_LOGOUT", OnPlayerLogout)
+	addon:ListenTo("PLAYER_LEVEL_UP", OnPlayerLevelUp)
+	addon:ListenTo("PLAYER_MONEY", OnPlayerMoney)
+	addon:ListenTo("PLAYER_XP_UPDATE", OnPlayerXPUpdate)
+	addon:ListenTo("PLAYER_UPDATE_RESTING", OnPlayerUpdateResting)
+	addon:ListenTo("HEARTHSTONE_BOUND", OnHearthstoneBound)
+	addon:ListenTo("PLAYER_GUILD_UPDATE", OnPlayerGuildUpdate)				-- for gkick, gquit, etc..
+	addon:ListenTo("ZONE_CHANGED", ScanPlayerLocation)
+	addon:ListenTo("ZONE_CHANGED_NEW_AREA", ScanPlayerLocation)
+	addon:ListenTo("ZONE_CHANGED_INDOORS", ScanPlayerLocation)
+	addon:ListenTo("TIME_PLAYED_MSG", OnTimePlayedMsg)					-- register the event if RequestTimePlayed is not called afterwards. If another addon calls it, we want to get the data anyway.
+	
+	if isRetail then
+		addon:ListenTo("ENABLE_XP_GAIN", ScanXPDisabled)
+		addon:ListenTo("DISABLE_XP_GAIN", ScanXPDisabled)
+		addon:ListenTo("COVENANT_CHOSEN", ScanCovenant)
+		addon:ListenTo("COVENANT_SANCTUM_RENOWN_LEVEL_CHANGED", ScanCovenant)
+	else
+		addon:SetupOptions()
+	end
+	
+	if options.RequestPlayTime then
 		RequestTimePlayed()	-- trigger a TIME_PLAYED_MSG event
 	end
-end
-
-function addon:OnDisable()
-	addon:UnregisterEvent("PLAYER_ALIVE")
-	addon:UnregisterEvent("PLAYER_LOGOUT")
-	addon:UnregisterEvent("PLAYER_LEVEL_UP")
-	addon:UnregisterEvent("PLAYER_MONEY")
-	addon:UnregisterEvent("PLAYER_XP_UPDATE")
-	addon:UnregisterEvent("PLAYER_UPDATE_RESTING")
-	addon:UnregisterEvent("PLAYER_GUILD_UPDATE")
-	addon:UnregisterEvent("ZONE_CHANGED")
-	addon:UnregisterEvent("ZONE_CHANGED_NEW_AREA")
-	addon:UnregisterEvent("ZONE_CHANGED_INDOORS")
-	addon:UnregisterEvent("TIME_PLAYED_MSG")
-	
-	if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
-		addon:UnregisterEvent("ENABLE_XP_GAIN")
-		addon:UnregisterEvent("DISABLE_XP_GAIN")
-		addon:UnregisterEvent("COVENANT_CHOSEN")
-		addon:UnregisterEvent("COVENANT_SANCTUM_RENOWN_LEVEL_CHANGED")
-	end
-end
+end)

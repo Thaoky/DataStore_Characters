@@ -1,5 +1,5 @@
-local L = LibStub("AceLocale-3.0"):NewLocale( "DataStore_Characters", "deDE" )
-
+local addonName = ...
+local L = DataStore:SetLocale(addonName, "deDE")
 if not L then return end
 
 L["HIDE_PLAYTIME_DISABLED"] = "Deine reale Spielzeit wird angezeigt."
@@ -10,4 +10,3 @@ L["REQUEST_PLAYTIME_DISABLED"] = "Die Spielzeit wird nicht beim Anmelden abgefra
 L["REQUEST_PLAYTIME_ENABLED"] = "Die Spielzeit wird beim Anmelden abgefragt."
 L["REQUEST_PLAYTIME_TEXT"] = "Spielzeit beim Anmelden abfragen."
 L["REQUEST_PLAYTIME_TITLE"] = "Spielzeit abfragen"
-

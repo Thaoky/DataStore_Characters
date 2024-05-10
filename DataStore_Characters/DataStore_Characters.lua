@@ -22,7 +22,7 @@ local bOr = bit.bor
 
 local isCoreDataMissing
 local MAX_LOGOUT_TIMESTAMP = 5000000000	-- 5 billion, current values are at ~1.4 billion, in seconds, that leaves us 110+ years, I think we're covered..
-local MAX_ALT_LEVEL = WOW_PROJECT_ID == WOW_PROJECT_WRATH_CLASSIC
+local MAX_ALT_LEVEL = WOW_PROJECT_ID == WOW_PROJECT_CATACLYSM_CLASSIC
 	and MAX_PLAYER_LEVEL_TABLE[GetExpansionLevel()]
 	or MAX_PLAYER_LEVEL
 
@@ -433,9 +433,10 @@ DataStore:OnAddonLoaded(addonName, function()
 end)
 
 DataStore:OnPlayerLogin(function()
-	options = DataStore_Characters_Options
-	options.RequestPlayTime = options.RequestPlayTime or true		-- Request play time at logon
-	options.HideRealPlayTime = options.HideRealPlayTime or false	-- Hide real play time to client addons (= return 0 instead of real value)
+	options = DataStore:SetDefaults("DataStore_Characters_Options", {
+		RequestPlayTime = true,			-- Request play time at logon
+		HideRealPlayTime = false,		-- Hide real play time to client addons (= return 0 instead of real value)
+	})	
 	
 	addon:ListenTo("PLAYER_ALIVE", OnPlayerAlive)
 	addon:ListenTo("PLAYER_LOGOUT", OnPlayerLogout)

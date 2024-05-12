@@ -168,8 +168,30 @@ local function _GetCharacterClass(character)
 	return info.className or "", info.classFile or "", classID
 end
 
+local classColors
+
+if not isRetail then
+	classColors = {
+		["HUNTER"] = "|cffaad372",
+		["WARRIOR"] = "|cffc69b6d",
+		["PALADIN"] = "|cfff48cba",
+		["MAGE"] = "|cff3fc6ea",
+		["PRIEST"] = "|cFFFFFFFF",
+		["SHAMAN"] = "|cff0070dd",
+		["WARLOCK"] = "|cff8787ed",
+		["DEMONHUNTER"] = "|cffa330c9",
+		["DEATHKNIGHT"] = "|cffc41e3a",
+		["DRUID"] = "|cffff7c0a",
+		["MONK"] = "|cff00ff96",
+		["ROGUE"] = "|cfffff468",
+		["EVOKER"] = "|cff33937f",
+	}
+end
+
 local function _GetClassColor(class)
-	return C_ClassColor.GetClassColor(class):GenerateHexColorMarkup()
+	return isRetail
+		and C_ClassColor.GetClassColor(class):GenerateHexColorMarkup()
+		or classColors[class]
 end
 
 local function _GetCharacterClassColor(character)

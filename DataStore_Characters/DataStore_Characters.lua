@@ -28,6 +28,13 @@ local MAX_ALT_LEVEL = WOW_PROJECT_ID == WOW_PROJECT_CATACLYSM_CLASSIC
 
 
 -- *** Scanning functions ***
+local function ScanBaseInfo()
+	thisCharacter.BaseInfo = UnitLevel("player")						-- bits 0-6 = level
+		+ bit64:LeftShift(select(3, UnitClass("player")), 7)		-- bits 7-10 = classID
+		+ bit64:LeftShift(select(3, UnitRace("player")), 11)		-- bits 11-17 = raceID
+		+ bit64:LeftShift(UnitSex("player"), 18)						-- bits 18-19 = gender
+end
+
 local function ScanPlayerLocation()
 	local char = thisCharacter
 	
@@ -101,10 +108,7 @@ local function OnPlayerAlive()
 	char.bindLocation = GetBindLocation()
 	char.lastLogoutTimestamp = MAX_LOGOUT_TIMESTAMP
 	
-	thisCharacter.BaseInfo = UnitLevel("player")						-- bits 0-6 = level
-		+ bit64:LeftShift(select(3, UnitClass("player")), 7)		-- bits 7-10 = classID
-		+ bit64:LeftShift(select(3, UnitRace("player")), 11)		-- bits 11-17 = raceID
-		+ bit64:LeftShift(UnitSex("player"), 18)						-- bits 18-19 = gender
+	ScanBaseInfo()
 	
 	OnPlayerMoney()
 	OnPlayerXPUpdate()
@@ -452,6 +456,9 @@ DataStore:OnAddonLoaded(addonName, function()
 	
 	thisCharacter = DataStore:GetCharacterDB("DataStore_Characters_Info", true)
 	guildRanks = DataStore_Characters_GuildRanks
+	
+	-- Some players seem not to get a proper PLAYER_ALIVE event ..
+	ScanBaseInfo()
 end)
 
 DataStore:OnPlayerLogin(function()

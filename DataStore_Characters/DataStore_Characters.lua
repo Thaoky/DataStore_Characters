@@ -92,9 +92,15 @@ local function OnPlayerUpdateResting()
 end
 
 local function OnPlayerXPUpdate()
-	thisCharacter.XPInfo = UnitXP("player")				-- bits 0-19 = player XP
-		+ bit64:LeftShift(UnitXPMax("player"), 20)		-- bits 20-39 = XP Max
-		+ bit64:LeftShift(GetXPExhaustion() or 0, 40)	-- bits 40+ = rest XP
+	-- In cataclysm, max xp goes beyond 20 bits or 1 million, so revert back to plain values
+	-- thisCharacter.XPInfo = UnitXP("player")				-- bits 0-19 = player XP
+		-- + bit64:LeftShift(UnitXPMax("player"), 20)		-- bits 20-39 = XP Max
+		-- + bit64:LeftShift(GetXPExhaustion() or 0, 40)	-- bits 40+ = rest XP
+		
+	thisCharacter.XP = UnitXP("player")
+	thisCharacter.maxXP = UnitXPMax("player") 
+	thisCharacter.restXP = GetXPExhaustion()
+	thisCharacter.XPInfo = nil		-- kill the old value
 end
 
 local function OnPlayerMoney()
@@ -252,15 +258,21 @@ local function _IsResting(character)
 end
 
 local function _GetXP(character)
-	return bit64:GetBits(character.XPInfo, 0, 20)	-- bits 0-19 = player XP
+	return character.XPInfo
+		and bit64:GetBits(character.XPInfo, 0, 20)	-- bits 0-19 = player XP
+		or character.XP 
 end
 
 local function _GetXPMax(character)
-	return bit64:GetBits(character.XPInfo, 20, 20)	-- bits 20-39 = XP Max
+	return character.XPInfo
+		and bit64:GetBits(character.XPInfo, 20, 20)	-- bits 20-39 = XP Max
+		or character.maxXP
 end
 
 local function _GetRestXP(character)
-	return bit64:RightShift(character.XPInfo, 40)	-- bits 40+ = rest XP
+	return character.XPInfo
+		and bit64:RightShift(character.XPInfo, 40)	-- bits 40+ = rest XP
+		or character.restXP
 end
 
 local function _GetXPRate(character)

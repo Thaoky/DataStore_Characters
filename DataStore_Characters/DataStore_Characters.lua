@@ -480,6 +480,7 @@ DataStore:OnPlayerLogin(function()
 	})	
 	
 	addon:ListenTo("PLAYER_ALIVE", OnPlayerAlive)
+	addon:ListenTo("PLAYER_ENTERING_WORLD", OnPlayerAlive)
 	addon:ListenTo("PLAYER_LOGOUT", OnPlayerLogout)
 	addon:ListenTo("PLAYER_LEVEL_UP", OnPlayerLevelUp)
 	addon:ListenTo("PLAYER_MONEY", OnPlayerMoney)

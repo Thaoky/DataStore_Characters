@@ -24,7 +24,7 @@ local isCoreDataMissing
 local MAX_LOGOUT_TIMESTAMP = 5000000000	-- 5 billion, current values are at ~1.4 billion, in seconds, that leaves us 110+ years, I think we're covered..
 local MAX_ALT_LEVEL = WOW_PROJECT_ID == WOW_PROJECT_CATACLYSM_CLASSIC
 	and MAX_PLAYER_LEVEL_TABLE[GetExpansionLevel()]
-	or MAX_PLAYER_LEVEL
+	or 80
 
 
 -- *** Scanning functions ***

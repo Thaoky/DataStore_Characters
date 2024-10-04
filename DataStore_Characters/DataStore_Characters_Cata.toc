@@ -4,7 +4,7 @@
 
 ## Notes: Stores information about characters (race, level, etc..)
 ## Author: Thaoky (EU-Marécages de Zangar)
-## Version: 2024.08.14
+## Version: 2024.09.15
 ## Dependencies: DataStore
 ## SavedVariables: DataStore_Characters_Info, DataStore_Characters_GuildRanks, DataStore_Characters_Options
 ## X-Category: Interface Enhancements

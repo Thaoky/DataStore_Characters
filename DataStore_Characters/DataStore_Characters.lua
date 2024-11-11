@@ -178,6 +178,10 @@ local function _GetCharacterClass(character)
 	return info.className or "", info.classFile or "", classID
 end
 
+local function _IsCharacterClass(character, classID)
+	return classID == bit64:GetBits(character.BaseInfo, 7, 4)	-- bits 7-10 = classID
+end
+
 local classColors
 
 if not isRetail then
@@ -432,6 +436,7 @@ DataStore:OnAddonLoaded(addonName, function()
 				GetCharacterLevel = _GetCharacterLevel,
 				GetCharacterRace = _GetCharacterRace,
 				GetCharacterClass = _GetCharacterClass,
+				IsCharacterClass = _IsCharacterClass,
 				GetCharacterClassColor = _GetCharacterClassColor,
 				GetColoredCharacterName = _GetColoredCharacterName,
 				GetCharacterFaction = _GetCharacterFaction,

@@ -1,3 +1,3 @@
 local addonName = ...
-local L = DataStore:SetLocale(addonName, "esMX")
+local L = AddonFactory:SetLocale(addonName, "esMX")
 if not L then return end

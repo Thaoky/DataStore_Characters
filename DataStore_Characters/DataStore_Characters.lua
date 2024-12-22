@@ -422,7 +422,7 @@ local function _GetCovenantName(character)
 	return data and data.name or ""
 end
 
-DataStore:OnAddonLoaded(addonName, function()
+AddonFactory:OnAddonLoaded(addonName, function()
 	DataStore:RegisterModule({
 		addon = addon,
 		addonName = addonName,
@@ -478,7 +478,7 @@ DataStore:OnAddonLoaded(addonName, function()
 	ScanBaseInfo()
 end)
 
-DataStore:OnPlayerLogin(function()
+AddonFactory:OnPlayerLogin(function()
 	options = DataStore:SetDefaults("DataStore_Characters_Options", {
 		RequestPlayTime = true,			-- Request play time at logon
 		HideRealPlayTime = false,		-- Hide real play time to client addons (= return 0 instead of real value)

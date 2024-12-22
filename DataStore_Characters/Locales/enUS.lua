@@ -1,5 +1,5 @@
 local addonName = ...
-local L = DataStore:SetDefaultLocale(addonName, "enUS")
+local L = AddonFactory:SetDefaultLocale(addonName, "enUS")
 
 L["HIDE_PLAYTIME_DISABLED"] = "Your real play time will be displayed."
 L["HIDE_PLAYTIME_ENABLED"] = "A play time of zero days will be displayed."

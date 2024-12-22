@@ -1,5 +1,5 @@
 local addonName = ...
-local L = DataStore:SetLocale(addonName, "esES")
+local L = AddonFactory:SetLocale(addonName, "esES")
 if not L then return end
 
 L["HIDE_PLAYTIME_DISABLED"] = "Se mostrará su tiempo de juego real."

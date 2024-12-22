@@ -1,5 +1,5 @@
 local addonName = ...
-local L = DataStore:SetLocale(addonName, "ruRU")
+local L = AddonFactory:SetLocale(addonName, "ruRU")
 if not L then return end
 
 L["HIDE_PLAYTIME_DISABLED"] = "Будет отображаться реальное время игры."

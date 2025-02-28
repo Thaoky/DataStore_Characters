@@ -75,7 +75,7 @@ local function OnPlayerGuildUpdate()
 	
 	-- if the character had a guild when entering this function, but is no longer in a guild, then trigger the event
 	if guildID then
-		DataStore:Broadcast("DATASTORE_GUILD_LEFT")
+		AddonFactory:Broadcast("DATASTORE_GUILD_LEFT")
 	end
 end
 

@@ -484,6 +484,7 @@ AddonFactory:OnPlayerLogin(function()
 		HideRealPlayTime = false,		-- Hide real play time to client addons (= return 0 instead of real value)
 	})	
 	
+	addon:ListenTo("PLAYER_ENTERING_WORLD", OnPlayerAlive)
 	addon:ListenTo("PLAYER_ALIVE", OnPlayerAlive)
 	addon:ListenTo("PLAYER_LOGOUT", OnPlayerLogout)
 	addon:ListenTo("PLAYER_LEVEL_UP", OnPlayerLevelUp)

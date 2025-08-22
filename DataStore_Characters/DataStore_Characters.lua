@@ -20,11 +20,13 @@ local bit64 = LibStub("LibBit64")
 local bAnd = bit.band
 local bOr = bit.bor
 
-local isCoreDataMissing
+-- MAX_PLAYER_LEVEL is provided in MoP, but nil in retail
+local MAX_LEVEL_INTERNAL = MAX_PLAYER_LEVEL or 80
+
 local MAX_LOGOUT_TIMESTAMP = 5000000000	-- 5 billion, current values are at ~1.4 billion, in seconds, that leaves us 110+ years, I think we're covered..
 local MAX_ALT_LEVEL = WOW_PROJECT_ID == WOW_PROJECT_CATACLYSM_CLASSIC
 	and MAX_PLAYER_LEVEL_TABLE[GetExpansionLevel()]
-	or 80
+	or MAX_LEVEL_INTERNAL
 
 
 -- *** Scanning functions ***
@@ -484,6 +486,7 @@ AddonFactory:OnPlayerLogin(function()
 		HideRealPlayTime = false,		-- Hide real play time to client addons (= return 0 instead of real value)
 	})	
 	
+	addon:ListenTo("PLAYER_ENTERING_WORLD", OnPlayerAlive)
 	addon:ListenTo("PLAYER_ALIVE", OnPlayerAlive)
 	addon:ListenTo("PLAYER_LOGOUT", OnPlayerLogout)
 	addon:ListenTo("PLAYER_LEVEL_UP", OnPlayerLevelUp)

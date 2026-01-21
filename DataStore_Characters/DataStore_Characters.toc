@@ -1,4 +1,4 @@
-## Interface: 110205
+## Interface: 120000
 ## Title: DataStore_Characters
 ## IconTexture: Interface\Icons\garrison_building_storehouse
 
@@ -8,6 +8,18 @@
 ## Dependencies: AddonFactory, DataStore
 ## SavedVariables: DataStore_Characters_Info, DataStore_Characters_GuildRanks, DataStore_Characters_Options
 ## X-Category: Interface Enhancements
+
+## Category: Libraries
+## Category-deDE: Bibliotheken
+## Category-esES: Bibliotecas
+## Category-esMX: Bibliotecas
+## Category-frFR: Bibliothèques
+## Category-itIT: Librerie
+## Category-koKR: 라이브러리
+## Category-ptBR: Bibliotecas
+## Category-ruRU: Библиотеки
+## Category-zhCN: 函数库
+## Category-zhTW: 函式庫
 
 Locale.xml
 

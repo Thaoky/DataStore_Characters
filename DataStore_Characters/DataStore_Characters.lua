@@ -24,10 +24,6 @@ local bOr = bit.bor
 local MAX_LEVEL_INTERNAL = MAX_PLAYER_LEVEL or GetMaxLevelForPlayerExpansion()
 
 local MAX_LOGOUT_TIMESTAMP = 5000000000	-- 5 billion, current values are at ~1.4 billion, in seconds, that leaves us 110+ years, I think we're covered..
-local MAX_ALT_LEVEL = WOW_PROJECT_ID == WOW_PROJECT_CATACLYSM_CLASSIC
-	and MAX_PLAYER_LEVEL_TABLE[GetExpansionLevel()]
-	or MAX_LEVEL_INTERNAL
-
 
 -- *** Scanning functions ***
 local function ScanBaseInfo()
@@ -100,8 +96,9 @@ local function OnPlayerXPUpdate()
 		-- + bit64:LeftShift(GetXPExhaustion() or 0, 40)	-- bits 40+ = rest XP
 		
 	thisCharacter.XP = UnitXP("player")
-	thisCharacter.maxXP = UnitXPMax("player") 
-	thisCharacter.restXP = GetXPExhaustion()
+	thisCharacter.maxXP = UnitXPMax("player")
+	-- Force nil to be zero since GetXPExhaustion is not reliable (sometimes returns 0, sometimes nil when no rest available)
+	thisCharacter.restXP = GetXPExhaustion() or 0
 	thisCharacter.XPInfo = nil		-- kill the old value
 end
 
@@ -311,7 +308,12 @@ local function _GetRestXPRate(character)
 		I had the same issue a week ago on my horde monk, which had 2.9M rest xp for a maximum of 3 levels (2.1M xp).
 	
 	--]] 
-	
+
+	-- ensure to report that a max level character has not earned xp while resting
+	if _GetCharacterLevel(character) == MAX_LEVEL_INTERNAL then
+		return 0, 0, 0, 0, 0, 0, false, 0
+	end
+
 	local rate = 0
 	local multiplier = 1.5
 	
@@ -374,10 +376,6 @@ local function _GetRestXPRate(character)
 		end
 	end
 	
-	-- ensure to report that a max level has not earned xp while resting
-	if _GetCharacterLevel(character) == MAX_ALT_LEVEL then
-		xpEarnedResting = -1
-	end
 	
 	return rate, savedXP, savedRate, rateEarnedResting, xpEarnedResting, maxXP, isFullyRested, timeUntilFullyRested
 end

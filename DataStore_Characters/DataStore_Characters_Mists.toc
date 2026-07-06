@@ -1,4 +1,4 @@
-## Interface: 50501
+## Interface: 50504
 ## Title: DataStore_Characters
 ## IconTexture: Interface\Icons\garrison_building_storehouse
 
@@ -25,3 +25,4 @@ locale.xml
 
 DataStore_Characters.lua
 Options.xml
+

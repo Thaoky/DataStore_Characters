@@ -215,7 +215,7 @@ local function _GetCharacterClassColor(character)
 end
 
 local function _GetColoredCharacterName(character)
-	return format("%s%s", _GetCharacterClassColor(character), character.name)
+	return format("%s%s", _GetCharacterClassColor(character), character.name or "?")
 end
 
 local function _GetCharacterFaction(character)
@@ -279,7 +279,9 @@ local function _GetRestXP(character)
 end
 
 local function _GetXPRate(character)
-	return floor((_GetXP(character) / _GetXPMax(character)) * 100)
+	local xp, maxXP = _GetXP(character), _GetXPMax(character)
+	if not xp or not maxXP or maxXP == 0 then return 0 end
+	return floor((xp / maxXP) * 100)
 end
 
 local function _GetRestXPRate(character)
@@ -325,7 +327,9 @@ local function _GetRestXPRate(character)
 	local savedRate = 0
 	local xpMax = _GetXPMax(character)
 	local restXP = _GetRestXP(character)
-	
+
+	if not xpMax then return 0 end
+
 	local maxXP = xpMax * multiplier
 	if restXP then
 		rate = restXP / (maxXP / 100)

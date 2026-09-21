@@ -202,20 +202,28 @@ if not isRetail then
 end
 
 local function _GetClassColor(class)
-	return isRetail
-		and C_ClassColor.GetClassColor(class):GenerateHexColorMarkup()
-		or classColors[class]
+	if not class then return "|cFFFFFFFF" end
+	if isRetail and C_ClassColor and C_ClassColor.GetClassColor then
+		local success, colorObj = pcall(C_ClassColor.GetClassColor, class)
+		if success and colorObj and colorObj.GenerateHexColorMarkup then
+			local success2, markup = pcall(colorObj.GenerateHexColorMarkup, colorObj)
+			if success2 and markup then return markup end
+		end
+	end
+	return classColors[class] or "|cFFFFFFFF"
 end
 
 local function _GetCharacterClassColor(character)
+	if not character then return "|cFFFFFFFF" end
 	local _, englishClass = _GetCharacterClass(character)
-
 	-- return just the color of this character's class (based on the character key)
-	return _GetClassColor(englishClass)
+	return _GetClassColor(englishClass) or "|cFFFFFFFF"
 end
 
 local function _GetColoredCharacterName(character)
-	return format("%s%s", _GetCharacterClassColor(character), character.name)
+	if not character or not character.name then return "" end
+	local color = _GetCharacterClassColor(character) or "|cFFFFFFFF"
+	return format("%s%s|r", color, character.name or "")
 end
 
 local function _GetCharacterFaction(character)
@@ -309,24 +317,38 @@ local function _GetRestXPRate(character)
 	
 	--]] 
 
-	-- ensure to report that a max level character has not earned xp while resting
-	if _GetCharacterLevel(character) == MAX_LEVEL_INTERNAL then
+	-- Fix #100: Rested XP incorrect for max level (80) - ensure max level returns 0 and prevent division by zero
+	local charLevel = _GetCharacterLevel(character)
+	if not charLevel then
+		return 0, 0, 0, 0, 0, 0, false, 0
+	end
+	-- MAX_LEVEL_INTERNAL may be nil or outdated, also check if xpMax is 0/nil (max level chars have no XP max)
+	local xpMaxCheck = _GetXPMax(character)
+	if not xpMaxCheck or xpMaxCheck == 0 or charLevel >= (MAX_LEVEL_INTERNAL or 80) then
 		return 0, 0, 0, 0, 0, 0, false, 0
 	end
 
 	local rate = 0
 	local multiplier = 1.5
 	
-	if _GetCharacterRace(character) == "Pandaren" then
+	local race = _GetCharacterRace(character)
+	if race == "Pandaren" then
 		multiplier = 3
 	end
 	
 	local savedXP = 0
 	local savedRate = 0
-	local xpMax = _GetXPMax(character)
+	local xpMax = xpMaxCheck
 	local restXP = _GetRestXP(character)
 	
+	if not xpMax or xpMax == 0 then
+		return 0, 0, 0, 0, 0, 0, false, 0
+	end
+	
 	local maxXP = xpMax * multiplier
+	if not maxXP or maxXP == 0 then
+		return 0, 0, 0, 0, 0, 0, false, 0
+	end
 	if restXP then
 		rate = restXP / (maxXP / 100)
 		savedXP = restXP

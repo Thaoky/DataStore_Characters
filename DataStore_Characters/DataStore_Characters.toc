@@ -1,10 +1,10 @@
-## Interface: 120100
+## Interface: 120100, 16001
 ## Title: DataStore_Characters
 ## IconTexture: Interface\Icons\garrison_building_storehouse
 
 ## Notes: Stores information about characters (race, level, etc..)
 ## Author: Thaoky (EU-Marécages de Zangar)
-## Version: 2026.09.22
+## Version: 2026.09.30
 ## Dependencies: AddonFactory, DataStore
 ## SavedVariables: DataStore_Characters_Info, DataStore_Characters_GuildRanks, DataStore_Characters_Options
 ## X-Category: Interface Enhancements

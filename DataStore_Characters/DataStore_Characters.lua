@@ -10,7 +10,7 @@ local guildRanks
 local options
 
 local DataStore = DataStore
-local UnitName, UnitLevel, UnitClass, UnitRace, UnitSex, UnitXP, UnitXPMax = UnitName, UnitLevel, UnitClass, UnitRace, UnitSex, UnitXP, UnitXPMax
+local UnitLevel, UnitClass, UnitRace, UnitSex, UnitXP, UnitXPMax = UnitLevel, UnitClass, UnitRace, UnitSex, UnitXP, UnitXPMax
 local GetRealZoneText, GetSubZoneText, GetGuildInfo, GetXPExhaustion, GetMoney, GetBindLocation = GetRealZoneText, GetSubZoneText, GetGuildInfo, GetXPExhaustion, GetMoney, GetBindLocation
 local IsResting, IsXPUserDisabled, format, time = IsResting, IsXPUserDisabled, format, time
 local C_CovenantSanctumUI, C_Covenants, C_Soulbinds, C_CreatureInfo, C_ClassColor = C_CovenantSanctumUI, C_Covenants, C_Soulbinds, C_CreatureInfo, C_ClassColor
@@ -109,7 +109,7 @@ end
 local function OnPlayerAlive()
 	local char = thisCharacter
 
-	char.name = UnitName("player")		-- to simplify processing a bit, the name is saved in the table too, in addition to being part of the key
+	char.name = AddonFactory:GetPlayerName()		-- to simplify processing a bit, the name is saved in the table too, in addition to being part of the key
 	char.bindLocation = GetBindLocation()
 	char.lastLogoutTimestamp = MAX_LOGOUT_TIMESTAMP
 	

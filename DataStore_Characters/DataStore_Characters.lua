@@ -14,7 +14,8 @@ local UnitLevel, UnitClass, UnitRace, UnitSex, UnitXP, UnitXPMax = UnitLevel, Un
 local GetRealZoneText, GetSubZoneText, GetGuildInfo, GetXPExhaustion, GetMoney, GetBindLocation = GetRealZoneText, GetSubZoneText, GetGuildInfo, GetXPExhaustion, GetMoney, GetBindLocation
 local IsResting, IsXPUserDisabled, format, time = IsResting, IsXPUserDisabled, format, time
 local C_CovenantSanctumUI, C_Covenants, C_Soulbinds, C_CreatureInfo, C_ClassColor = C_CovenantSanctumUI, C_Covenants, C_Soulbinds, C_CreatureInfo, C_ClassColor
-local isRetail = (WOW_PROJECT_ID == WOW_PROJECT_MAINLINE)
+local isRetail = AddonFactory.isRetail
+local isForever = AddonFactory.isForever
 
 local bit64 = LibStub("LibBit64")
 local bAnd = bit.band
@@ -499,7 +500,7 @@ AddonFactory:OnPlayerLogin(function()
 	addon:ListenTo("ZONE_CHANGED_INDOORS", ScanPlayerLocation)
 	addon:ListenTo("TIME_PLAYED_MSG", OnTimePlayedMsg)					-- register the event if RequestTimePlayed is not called afterwards. If another addon calls it, we want to get the data anyway.
 	
-	if isRetail then
+	if isRetail or isForever then
 		addon:ListenTo("ENABLE_XP_GAIN", ScanXPDisabled)
 		addon:ListenTo("DISABLE_XP_GAIN", ScanXPDisabled)
 		addon:ListenTo("COVENANT_CHOSEN", ScanCovenant)

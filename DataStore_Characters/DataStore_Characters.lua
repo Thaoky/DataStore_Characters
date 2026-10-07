@@ -345,7 +345,7 @@ local function _GetRestXPRate(character)
 	local now = time()
 	
 	-- time since last logout, MAX_LOGOUT_TIMESTAMP for current char, <> for all others
-	if character.lastLogoutTimestamp ~= MAX_LOGOUT_TIMESTAMP then	
+	-- if character.lastLogoutTimestamp ~= MAX_LOGOUT_TIMESTAMP then	
 		local oneXPBubble = xpMax / 20		-- 5% at current level 
 		local elapsed = (now - character.lastLogoutTimestamp)		-- time since last logout, in seconds
 		local numXPBubbles = elapsed / 28800		-- 28800 seconds = 8 hours => get the number of xp bubbles earned
@@ -375,8 +375,7 @@ local function _GetRestXPRate(character)
 			
 			rate = rate + rateEarnedResting
 		end
-	end
-	
+	-- end	
 	
 	return rate, savedXP, savedRate, rateEarnedResting, xpEarnedResting, maxXP, isFullyRested, timeUntilFullyRested
 end
